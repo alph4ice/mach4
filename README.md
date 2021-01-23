@@ -1,2 +1,1 @@
-# Mach4
-Flask-based Python API development framework in Python
+Mach4 is a Python3 API framework based on Flask. Docs comming soon!
