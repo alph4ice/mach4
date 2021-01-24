@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="mach4", # Replace with your own username
+    name="mach4",
     version="0.0.1",
     author="Cyriaque Perier",
     description="Mach4 is a Python3 API framework based on Flask. ",
