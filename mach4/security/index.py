@@ -95,7 +95,7 @@ class KeyIndex:
 
     """
 
-    def __init__(self, server_name, max_user_per_keys, keys_time_out, debug=False):
+    def __init__(self, server_name, max_user_per_keys, keys_time_out, users_time_out, debug=False):
 
         """
 
@@ -111,14 +111,45 @@ class KeyIndex:
         self.server_name = server_name
         self.default_max_user_jwt = max_user_per_keys
         self.default_max_user_xsrf = max_user_per_keys
-        self.default_time_out_jwt = keys_time_out
-        self.default_time_out_xsrf = keys_time_out
+        self.keys_time_out = keys_time_out
+        self.users_time_out = users_time_out
         self.debug = debug
-
+        self.event = {}
+    
+    def register_event(self, event_type, event_handler):
+        
+        """
+        
+        Register a function to be called back when event happens
+        
+        """
+        
+        if not event_type in self.event:
+            
+            self.event[event_type] = []
+        
+        self.event[event_type].append(event_handler)
+        
+    def call_event(self, event_type, event_params):
+        
+        """
+        
+        Call back all registered function to a specific event
+        
+        """
+        
+        if event_type in self.event:
+            
+            event_handlers = self.event.values()
+            
+            for event_handler in event_handlers:
+                
+                event_handler(event_type, event_params)
+    
     def add_jwt_key(
         self,
         key_index=None,
-        key_value=generator.key(4096),
+        key_value=generator.key(1024),
         issued_at=round(time.time() * 1000),
         user_count=0,
     ):
@@ -142,7 +173,7 @@ class KeyIndex:
     def add_xsrf_keys(
         self,
         key_index=None,
-        key_value=generator.key(4096),
+        key_value=generator.key(1024),
         issued_at=round(time.time() * 1000),
         user_count=0,
     ):
@@ -193,7 +224,7 @@ class KeyIndex:
         return self.xsrf_keys[key_index].key_value
 
     def create_user_auth(
-        self, user_id, app_name, time_out, not_before=round(time.time() * 1000)
+        self, user_id, app_name, not_before=round(time.time() * 1000)
     ):
 
         """
@@ -204,12 +235,7 @@ class KeyIndex:
 
         if len(self.jwt_rapid_access) == 0 or len(self.xsrf_rapid_access) == 0:
 
-            self.refresh_keys(
-                self.default_time_out_jwt,
-                self.default_time_out_xsrf,
-                self.default_max_user_jwt,
-                self.default_max_user_xsrf,
-            )
+            self.refresh_keys()
 
         jwt_key = self.jwt_rapid_access[
             random.randint(0, len(self.jwt_rapid_access) - 1)
@@ -228,7 +254,7 @@ class KeyIndex:
         jwt_payload["iss"] = self.server_name
         jwt_payload["sub"] = user_id
         jwt_payload["aud"] = app_name
-        jwt_payload["exp"] = now + time_out
+        jwt_payload["exp"] = now + self.users_time_out
         jwt_payload["nbf"] = not_before
         jwt_payload["iat"] = now
         jwt_payload["jti"] = token_id
@@ -262,8 +288,6 @@ class KeyIndex:
             self.add_xsrf_keys()
 
         # Definition of work variables
-        time_out_jwt = self.default_time_out_jwt
-        time_out_xsrf = self.default_time_out_xsrf
         max_user_jwt = self.default_max_user_jwt
         max_user_xsrf = self.default_max_user_xsrf
 
@@ -278,9 +302,9 @@ class KeyIndex:
 
         for key in jwt_keys.values():
 
-            if key.get_issued_at() + time_out_jwt < round(time.time() * 1000):
+            if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
 
-                if key.get_issued_at() + (time_out_jwt * 2) < round(time.time() * 1000):
+                if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
                     # Keep this key longer preventing late attribution error
                     jwt_delete.append(key.get_key_index())
 
@@ -292,15 +316,19 @@ class KeyIndex:
 
                     print("Removed JWT HMAC-SHA256 key " + key.get_key_index())
 
-            if key.get_user_count() < max_user_jwt:
+            elif key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out:
+
+                jwt_rapid_access.remove(key.get_key_index())
+
+            elif key.get_user_count() < max_user_jwt:
 
                 jwt_rapid_access.append(key.key_index)
 
         for key in xsrf_keys.values():
 
-            if key.get_issued_at() + time_out_xsrf < round(time.time() * 1000):
+            if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
 
-                if key.get_issued_at() + (time_out_xsrf * 2) < round(
+                if key.get_issued_at() + self.keys_time_out < round(
                     time.time() * 1000
                 ):
                     # Keep this key longer preventing late attribution error
@@ -314,7 +342,11 @@ class KeyIndex:
 
                     print("Removed XSRF-Token HMAC-SHA256 key " + key.get_key_index())
 
-            if key.get_user_count() < max_user_xsrf:
+            elif key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out:
+
+                xsrf_rapid_access.remove(key.get_key_index())
+
+            elif key.get_user_count() < max_user_xsrf:
 
                 xsrf_rapid_access.append(key.key_index)
 

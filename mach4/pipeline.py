@@ -17,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-MACH4_VERSION = "0.0.1"
+MACH4_VERSION = "0.0.2"
 MACH4_ENV = "DEV"
 
 
@@ -64,6 +64,7 @@ class API:
         name,
         debug=False,
         default_return=response.error_response,
+        users_time_out=1800000,
         keys_time_out=3600000,
         max_user_per_keys=50,
         deep_diag=False,
@@ -84,7 +85,7 @@ class API:
         self.default_return = default_return
         self.routing = {}
         self.index = security.KeyIndex(
-            server_name, max_user_per_keys, keys_time_out, debug
+            server_name, max_user_per_keys, keys_time_out, users_time_out, debug
         )
 
         self.refresh = Refresh()
