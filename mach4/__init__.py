@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
+
 """
-Created on Wed Jan 20 21:31:59 2021
+Flask-based API development framework in Python
+
+GitHub: https://github.com/alph4ice/mach4/
+PyPI: https://pypi.org/project/mach4/
 
 Copyright 2021 Cyriaque Perier
 
@@ -21,3 +25,5 @@ from flask import request
 from .response import *
 from .refresh import *
 from .pipeline import API
+
+__version__ = "0.0.2 DEV"
