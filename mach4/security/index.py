@@ -22,7 +22,7 @@ import random
 import json
 import jwt
 from mach4.security import generator
-
+from mach4.security.event import EventType
 
 class Key:
 
@@ -152,6 +152,7 @@ class KeyIndex:
         key_value=generator.key(1024),
         issued_at=round(time.time() * 1000),
         user_count=0,
+        call_event=True
     ):
 
         """
@@ -167,7 +168,11 @@ class KeyIndex:
         if self.debug:
 
             print("Created JWT HMAC-SHA256 key " + key_index)
-
+        
+        if call_event:
+            
+            self.call_event(EventType.ADD_JWT_KEY, (key_index, key_value))
+        
         return (key_index, key_value)
 
     def add_xsrf_keys(
@@ -176,6 +181,7 @@ class KeyIndex:
         key_value=generator.key(1024),
         issued_at=round(time.time() * 1000),
         user_count=0,
+        call_event=True
     ):
 
         """
@@ -192,7 +198,11 @@ class KeyIndex:
         if self.debug:
 
             print("Created XSRF HMAC-SHA256 key " + key_index)
-
+        
+        if call_event:
+            
+            self.call_event(EventType.ADD_XSRF_KEY, (key_index, key_value))
+        
         return (key_index, key_value)
 
     def get_jwt_key(self, key_index):
