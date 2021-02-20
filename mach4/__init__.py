@@ -25,5 +25,6 @@ from flask import request
 from .response import *
 from .refresh import *
 from .pipeline import API
+from .pipeline import MACH4_VERSION
 
-__version__ = "0.0.2 DEV"
+__version__ = MACH4_VERSION

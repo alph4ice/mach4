@@ -23,8 +23,8 @@ from flask import request, Flask
 from .refresh import Refresh
 from mach4 import response
 from mach4 import security
-from mach4 import __version__
 
+MACH4_VERSION = "0.0.1-DEV"
 
 
 class Route:
@@ -146,7 +146,7 @@ class API:
         """
 
         response.headers["server"] = "Mach4/{} {}/{}".format(
-            __version__, self.server_name, self.app_version
+            MACH4_VERSION, self.server_name, self.app_version
         )
 
         return response
