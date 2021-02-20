@@ -24,7 +24,7 @@ from .refresh import Refresh
 from mach4 import response
 from mach4 import security
 
-MACH4_VERSION = "0.0.1-DEV"
+MACH4_VERSION = "0.1.1-DEV"
 
 
 class Route:
