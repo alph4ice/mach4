@@ -17,15 +17,17 @@ import mach4
 ```
 ## 3. Initialise
 ```python
-api = mach4.API(“My API Name”, “1.0”, __name__)
+api = mach4.API("My API Name", "1.0", __name__)
 ```
 ## 4. Add
 ```python
 def index():
-	return “You’re logged!”
-api.add_route(“/index”, accept_method = [“GET”, “POST”], auth_required = True)
+	return "You’re logged!"
+api.add_route("/index", accept_method = ["GET", "POST"], auth_required = True)
 ```
 Congratulations, you are officially the master of the world!
+# Documentation
+Comming soon!
 # License
    Copyright 2021 Cyriaque Perier
 
