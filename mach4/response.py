@@ -49,7 +49,7 @@ def error_response(error):
     return (json.dumps({"error": error.value[0]}), error.value[1])
 
 
-def valid_login(api, user_id, time_out, app_name=None):
+def valid_login(api, user_id, app_name=None):
 
     """
 
@@ -61,7 +61,7 @@ def valid_login(api, user_id, time_out, app_name=None):
 
         app_name = api.server_name
 
-    jwt, xsrf_token = api.index.create_user_auth(user_id, app_name, time_out)
+    jwt, xsrf_token = api.index.create_user_auth(user_id, app_name)
     login_response = make_response(
         json.dumps({"auth": "success", "user": user_id, "xsrf-token": xsrf_token})
     )
