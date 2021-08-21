@@ -326,7 +326,7 @@ class KeyIndex:
 
                     print("Removed JWT HMAC-SHA256 key " + key.get_key_index())
 
-            elif key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out and key.get_key_index() in jwt_rapid_access:
+            elif (key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out) and (key.get_key_index() in jwt_rapid_access):
 
                 jwt_rapid_access.remove(key.get_key_index())
 
