@@ -1,5 +1,5 @@
 # What is Mach4
-Mach4 is a Python3 framework allowing the creation of APIs in a simple, fast and secure way, based on Flask.
+Mach4 is a Python3 framework allowing the creation of APIs in a simple, fast and secure way, by managing Json Web Token signature.
 # Why use an API framework
 Mach4 provides the developer with a security system that allows the developer to develop its APIs while guaranteeing the authentication of its end users.
 # Concrete case study
@@ -25,9 +25,8 @@ def index():
 	return "You’re logged!"
 api.add_route("/index", accept_method = ["GET", "POST"], auth_required = True)
 ```
-Congratulations, you are officially the master of the world!
 # Documentation
-Comming soon!
+Refer to in-code comments.
 # License
    Copyright 2021 Cyriaque Perier
 

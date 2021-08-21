@@ -101,7 +101,7 @@ class API:
 
         """
 
-        Add a route in the route manager
+        Add route in the route manager
 
         """
 
@@ -145,8 +145,6 @@ class API:
 
         """
 
-        response.headers["server"] = "Mach4/{} {}/{}".format(
-            MACH4_VERSION, self.server_name, self.app_version
-        )
+        response.headers["server"] = "Mach4"
 
         return response
