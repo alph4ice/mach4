@@ -18,29 +18,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from enum import Enum
 import json
 from flask import make_response
-
-
-class ClientError(Enum):
-
-    """
-
-    HTTP Client Errors (4xx)
-
-    """
-
-    BAD_REQUEST = ("Bad Request", 400)
-    UNAUTHORIZED = ("Unauthorized", 401)
-    PAYMENT_REQUIRED = ("Payment Required", 402)
-    FORBIDDEN = ("Forbidden", 403)
-    NOT_FOUND = ("Not Found", 404)
-    METHOD_NOT_ALLOWED = ("Method Not Allowed", 405),
-    NOT_ACCEPTABLE = ("Not Acceptable", 406),
-    PROXY_AUTHENTICATION_REQUIRED = ("Proxy Authentication Required", 407),
-    REQUEST_TIMEOUT = ("Request Timeout", 408),
-    CONFLICT = ("Conflict", 409)
+from .error import ClientError
 
 
 def error_response(error, details=None):
