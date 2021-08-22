@@ -18,6 +18,7 @@ limitations under the License.
 """
 
 from threading import Thread
+import time
 
 
 class Refresh(Thread):
@@ -58,14 +59,18 @@ class Refresh(Thread):
         Separate thread
 
         """
-
+        
         while self.keep_alive:
 
             functions = self.functions.copy()
-
+            
+            time.sleep(0.5)
+            
             for function in functions:
 
-                function()
+                if function():
+                    
+                    self.interrupt()
 
     def add_function(self, function):
 

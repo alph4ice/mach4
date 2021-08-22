@@ -23,6 +23,7 @@ import json
 import jwt
 from mach4.security import generator
 from mach4.security.event import EventType
+from mach4.utils import Colors
 
 class Key:
 
@@ -115,6 +116,9 @@ class KeyIndex:
         self.users_time_out = users_time_out
         self.debug = debug
         self.event = {}
+        self.bug_count = 0
+        
+        self.refresh_keys()
     
     def register_event(self, event_type, event_handler):
         
@@ -149,8 +153,6 @@ class KeyIndex:
     def add_jwt_key(
         self,
         key_index=None,
-        key_value=generator.key(1024),
-        issued_at=round(time.time() * 1000),
         user_count=0,
         call_event=True
     ):
@@ -160,10 +162,13 @@ class KeyIndex:
         Add JWT HMAC-SHA256 key into index
 
         """
+        
+        key_value = generator.key(1024)
+        issued_at = round(time.time() * 1000)
 
         if key_index is None:
             key_index = generator.new_uuid(self.jwt_keys.keys())
-
+        
         self.jwt_keys[key_index] = Key(key_index, key_value, issued_at, user_count)
         if self.debug:
 
@@ -175,11 +180,9 @@ class KeyIndex:
         
         return (key_index, key_value)
 
-    def add_xsrf_keys(
+    def add_xsrf_key(
         self,
         key_index=None,
-        key_value=generator.key(1024),
-        issued_at=round(time.time() * 1000),
         user_count=0,
         call_event=True
     ):
@@ -189,6 +192,9 @@ class KeyIndex:
         Add XSRF HMAC-SHA256 key into index
 
         """
+        
+        key_value=generator.key(1024)
+        issued_at=round(time.time() * 1000)
 
         if key_index is None:
             key_index = generator.new_uuid(self.xsrf_keys.keys())
@@ -217,7 +223,7 @@ class KeyIndex:
 
             return None
 
-        return self.jwt_keys[key_index].key_value
+        return self.jwt_keys[key_index]
 
     def get_xsrf_key(self, key_index):
 
@@ -231,7 +237,7 @@ class KeyIndex:
 
             return None
 
-        return self.xsrf_keys[key_index].key_value
+        return self.xsrf_keys[key_index]
 
     def create_user_auth(
         self, user_id, app_name, not_before=round(time.time() * 1000)
@@ -272,10 +278,11 @@ class KeyIndex:
         jwt_payload["dtk"] = xsrf_key
 
         json_web_token = generator.generate_hs256_jwt(
-            jwt_payload, self.get_jwt_key(jwt_key)
+            jwt_payload, self.get_jwt_key(jwt_key).get_key_value()
         )
         xsrf_token = generator.generate_xsrf_token(
-            now, self.get_xsrf_key(xsrf_key), user_id
+            now, self.get_xsrf_key(xsrf_key).get_key_value(),
+            user_id
         )
 
         return (json_web_token, xsrf_token)
@@ -287,94 +294,89 @@ class KeyIndex:
         Delete all outdated keys and refresh Rapid Access dictionnary
 
         """
-
+        
         # Make sure that there are at least 5 keys available
-        if len(self.jwt_rapid_access) < 5:
+        
+        while len(self.jwt_rapid_access) < 5:
 
-            self.add_jwt_key()
+            index = self.add_jwt_key()[0]
+            self.jwt_rapid_access.append(index)
 
-        if len(self.xsrf_rapid_access) < 5:
+        while len(self.xsrf_rapid_access) < 5:
 
-            self.add_xsrf_keys()
-
-        # Definition of work variables
-        max_user_jwt = self.default_max_user_jwt
-        max_user_xsrf = self.default_max_user_xsrf
-
-        jwt_rapid_access = []
-        xsrf_rapid_access = []
-
-        jwt_delete = []
-        xsrf_delete = []
-
-        jwt_keys = self.jwt_keys.copy()
-        xsrf_keys = self.xsrf_keys.copy()
-
-        for key in jwt_keys.values():
-
-            if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
-
-                if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
-                    # Keep this key longer preventing late attribution error
-                    jwt_delete.append(key.get_key_index())
-
-                if key.key_index in jwt_rapid_access:
-                    # Set key as unavailable
-                    jwt_rapid_access.remove(key.get_key_index())
-
-                if self.debug:
-
-                    print("Removed JWT HMAC-SHA256 key " + key.get_key_index())
-
-            elif (key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out) and (key.get_key_index() in jwt_rapid_access):
-
-                jwt_rapid_access.remove(key.get_key_index())
-
-            elif key.get_user_count() < max_user_jwt:
-
-                jwt_rapid_access.append(key.key_index)
-
-        for key in xsrf_keys.values():
-
-            if key.get_issued_at() + self.keys_time_out < round(time.time() * 1000):
-
-                if key.get_issued_at() + self.keys_time_out < round(
-                    time.time() * 1000
-                ):
-                    # Keep this key longer preventing late attribution error
-                    xsrf_delete.append(key.get_key_index())
-
-                if key.key_index in xsrf_rapid_access:
-                    # Set key as unavailable
-                    xsrf_rapid_access.remove(key.get_key_index())
-
-                if self.debug:
-
-                    print("Removed XSRF-Token HMAC-SHA256 key " + key.get_key_index())
-
-            elif key.get_issued_at() + self.keys_time_out < round(time.time() * 1000) + self.users_time_out and key.get_key_index() in xsrf_rapid_access:
-
-                xsrf_rapid_access.remove(key.get_key_index())
-
-            elif key.get_user_count() < max_user_xsrf:
-
-                xsrf_rapid_access.append(key.key_index)
-
-        # Deletion of keys registered as outdated
-        for key_index in jwt_delete:
-
-            del jwt_keys[key_index]
-
-        for key_index in xsrf_delete:
-
-            del xsrf_keys[key_index]
-
-        # Updating the keys in the index
-        self.jwt_rapid_access = jwt_rapid_access
-        self.xsrf_rapid_access = xsrf_rapid_access
-
-        self.jwt_keys = jwt_keys
-        self.xsrf_keys = xsrf_keys
+            index = self.add_xsrf_key()[0]
+            self.xsrf_rapid_access.append(index)
+        
+        
+        # Removing unavailable keys from available keys list
+        
+        for jwt_available_key_index in self.jwt_rapid_access.copy():
+            
+            if self.bug_count == 20:
+                
+                return True
+            
+            jwt_available_key = self.get_jwt_key(jwt_available_key_index) # Getting the key's details
+            
+            if jwt_available_key is None:
+                
+                self.jwt_rapid_access.remove(jwt_available_key_index) # Removing the unavailable key from available keys list
+                
+                if self.debug == True:
+                    
+                    print(Colors.RED + "Removed anonymous key {}.".format(jwt_available_key_index))
+            
+            elif (round(time.time() * 1000) + self.users_time_out) >= (jwt_available_key.get_issued_at() + self.keys_time_out) or jwt_available_key.get_user_count() >= self.default_max_user_jwt: # Key will be outdated before token expiration or max users number reached
+                
+                self.jwt_rapid_access.remove(jwt_available_key_index) # Removing the unavailable key from available keys list
+                new_jwt_key_index = self.add_jwt_key()[0] # Creating a replacing key
+                self.jwt_rapid_access.append(new_jwt_key_index) # Setting the replacing key as available
+        
+        for xsrf_available_key_index in self.xsrf_rapid_access.copy():
+            
+            xsrf_available_key = self.get_xsrf_key(xsrf_available_key_index) # Getting the key's details
+            
+            if xsrf_available_key is None:
+                
+                self.xsrf_rapid_access.remove(xsrf_available_key_index) # Removing the unavailable key from available keys list
+                
+                if self.debug == True:
+                    
+                    print(Colors.RED + "Removed anonymous key {}.".format(xsrf_available_key_index))
+            
+            elif (round(time.time() * 1000) + self.users_time_out) >= (xsrf_available_key.get_issued_at() + self.keys_time_out) or xsrf_available_key.get_user_count() >= self.default_max_user_xsrf: # Key will be outdated before token expiration or max users number reached
+                
+                self.xsrf_rapid_access.remove(xsrf_available_key_index) # Removing the unavailable key from available keys list
+                new_xsrf_key_index = self.add_xsrf_key()[0] # Creating a replacing key
+                self.xsrf_rapid_access.append(new_xsrf_key_index) # Setting the replacing key as available
+        
+        
+        # Deleting outdated keys
+        
+        for jwt_key_index in self.jwt_keys.copy():
+            
+            jwt_key = self.jwt_keys[jwt_key_index]
+            
+            if jwt_key.get_issued_at() + self.keys_time_out <= round(time.time() * 1000):
+                
+                del self.jwt_keys[jwt_key.key_index]
+                
+                if self.debug == True:
+                    
+                    print("Removed outdated key {}.".format(jwt_key_index))
+        
+        for xsrf_key_index in self.xsrf_keys.copy():
+            
+            xsrf_key = self.xsrf_keys[xsrf_key_index]
+            
+            if xsrf_key.get_issued_at() + self.keys_time_out <= round(time.time() * 1000):
+                
+                del self.xsrf_keys[xsrf_key.key_index]
+                
+                if self.debug == True:
+                    
+                    print("Removed outdated key {}.".format(xsrf_key_index))
+                
 
 
 def check_auth(json_web_token, xsrf_token, user_id, index):

@@ -79,7 +79,7 @@ def key(lenght):
     Generate a random hex key
 
     """
-
+    
     return os.urandom(lenght).hex()
 
 

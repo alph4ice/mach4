@@ -23,7 +23,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="mach4",
-    version="0.1.1",
+    version="0.1.2",
     author="Cyriaque Perier",
     description="Mach4 is a Python3 API framework based on Flask. ",
     long_description=long_description,
