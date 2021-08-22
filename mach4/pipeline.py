@@ -20,8 +20,9 @@ limitations under the License.
 
 
 from flask import request, Flask
-from mach4.utils import response, Refresh
 from mach4 import security
+from mach4 import utils
+from mach4.debug import Debug
 
 MACH4_VERSION = "0.2.0-DEV"
 
@@ -65,7 +66,7 @@ class API:
         name,
         default_captcha_instance=None,
         debug=False,
-        default_return=response.error_response,
+        default_return=utils.error_response,
         users_time_out=1800000,
         keys_time_out=3600000,
         max_user_per_keys=50,
@@ -78,20 +79,20 @@ class API:
         @name must be set as __name__
 
         """
-
+        
         self.app_version = app_version
         self.server_name = server_name
         self.wsgi = Flask(name)
         self.default_captcha_instance = default_captcha_instance
-        self.debug = debug
+        self.debug = Debug(debug)
         self.deep_diag = False
         self.default_return = default_return
         self.routing = {}
         self.index = security.KeyIndex(
-            server_name, max_user_per_keys, keys_time_out, users_time_out, debug
+            server_name, max_user_per_keys, keys_time_out, users_time_out, self.debug
         )
 
-        self.refresh = Refresh()
+        self.refresh = utils.Refresh()
         self.refresh.add_function(self.index.refresh_keys)
         self.refresh.start()
 
@@ -123,14 +124,14 @@ class API:
 
         if not uri in self.routing:
 
-            return self.default_return(response.ClientError.NOT_FOUND)
+            return self.default_return(utils.ClientError.NOT_FOUND)
         
         
         # Method checking
         
         if not request.method in self.routing[uri].accept_method: # If used method isn't allowed
             
-            return self.default_return(response.ClientError.METHOD_NOT_ALLOWED) # Send HTTP 405 Error
+            return self.default_return(utils.ClientError.METHOD_NOT_ALLOWED) # Send HTTP 405 Error
         
         
         # Captcha checking
@@ -151,7 +152,7 @@ class API:
             
             if not captcha_validity:
                 
-                return self.default_return(response.ClientError.CONFLICT) # Send HTTP 409 Error
+                return self.default_return(utils.ClientError.CONFLICT) # Send HTTP 409 Error
         
         
         # Auth checking
@@ -165,7 +166,7 @@ class API:
 
             if not security.check_auth(jwt, xsrf_token, user_id, self.index): # If signatures can't be validated
 
-                return self.default_return(response.ClientError.UNAUTHORIZED) # Send HTTP 401 Error
+                return self.default_return(utils.ClientError.UNAUTHORIZED) # Send HTTP 401 Error
 
     def after_request(self, response):
 
