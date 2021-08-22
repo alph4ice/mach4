@@ -97,7 +97,7 @@ class KeyIndex:
 
     """
 
-    def __init__(self, server_name, max_user_per_keys, keys_time_out, users_time_out, debug=False):
+    def __init__(self, server_name, max_user_per_keys, keys_time_out, users_time_out, debug):
 
         """
 
@@ -171,10 +171,7 @@ class KeyIndex:
             key_index = generator.new_uuid(self.jwt_keys.keys())
         
         self.jwt_keys[key_index] = Key(key_index, key_value, issued_at, user_count)
-        if self.debug:
-
-            print("Created JWT HMAC-SHA256 key " + key_index)
-        
+        self.debug.log("Security", "{}Created JWT HMAC-SHA256 key {}.".format(Colors.YELLOW, key_index))
         if call_event:
             
             self.call_event(EventType.ADD_JWT_KEY, (key_index, key_value))
@@ -202,9 +199,7 @@ class KeyIndex:
 
         self.xsrf_keys[key_index] = Key(key_index, key_value, issued_at, user_count)
 
-        if self.debug:
-
-            print("Created XSRF HMAC-SHA256 key " + key_index)
+        self.debug.log("Security", "{}Created XSRF HMAC-SHA256 key {}.".format(Colors.YELLOW, key_index))
         
         if call_event:
             
@@ -323,9 +318,7 @@ class KeyIndex:
                 
                 self.jwt_rapid_access.remove(jwt_available_key_index) # Removing the unavailable key from available keys list
                 
-                if self.debug == True:
-                    
-                    print(Colors.RED + "Removed anonymous key {}.".format(jwt_available_key_index))
+                self.debug.log("Security", Colors.RED + "Removed anonymous JWT key {}.".format(jwt_available_key_index))
             
             elif (round(time.time() * 1000) + self.users_time_out) >= (jwt_available_key.get_issued_at() + self.keys_time_out) or jwt_available_key.get_user_count() >= self.default_max_user_jwt: # Key will be outdated before token expiration or max users number reached
                 
@@ -341,9 +334,7 @@ class KeyIndex:
                 
                 self.xsrf_rapid_access.remove(xsrf_available_key_index) # Removing the unavailable key from available keys list
                 
-                if self.debug == True:
-                    
-                    print(Colors.RED + "Removed anonymous key {}.".format(xsrf_available_key_index))
+                self.debug.log("Security", Colors.RED + "Removed anonymous key {}.".format(xsrf_available_key_index))
             
             elif (round(time.time() * 1000) + self.users_time_out) >= (xsrf_available_key.get_issued_at() + self.keys_time_out) or xsrf_available_key.get_user_count() >= self.default_max_user_xsrf: # Key will be outdated before token expiration or max users number reached
                 
@@ -362,9 +353,7 @@ class KeyIndex:
                 
                 del self.jwt_keys[jwt_key.key_index]
                 
-                if self.debug == True:
-                    
-                    print("Removed outdated key {}.".format(jwt_key_index))
+                self.debug.log("Security",  Colors.YELLOW + "Removed outdated JWT HMAC-SHA256 key {}.".format(jwt_key_index))
         
         for xsrf_key_index in self.xsrf_keys.copy():
             
@@ -374,9 +363,7 @@ class KeyIndex:
                 
                 del self.xsrf_keys[xsrf_key.key_index]
                 
-                if self.debug == True:
-                    
-                    print("Removed outdated key {}.".format(xsrf_key_index))
+                self.debug.log("Security", Colors.YELLOW + "Removed outdated XSRF HMAC-SHA256 key {}.".format(xsrf_key_index))
                 
 
 
