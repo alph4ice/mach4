@@ -25,3 +25,4 @@ from .text import *
 from .captcha import *
 from .refresh import *
 from .response import *
+from .error import *
