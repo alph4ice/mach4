@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Wed Jan 20 18:42:48 2021
 
@@ -22,11 +23,11 @@ import json
 from flask import make_response
 
 
-class Error(Enum):
+class ClientError(Enum):
 
     """
 
-    HTTP Errors
+    HTTP Client Errors (4xx)
 
     """
 
@@ -35,10 +36,14 @@ class Error(Enum):
     PAYMENT_REQUIRED = ("Payment Required", 402)
     FORBIDDEN = ("Forbidden", 403)
     NOT_FOUND = ("Not Found", 404)
-    METHOD_NOT_ALLOWED = ("Method Not Allowed", 405)
+    METHOD_NOT_ALLOWED = ("Method Not Allowed", 405),
+    NOT_ACCEPTABLE = ("Not Acceptable", 406),
+    PROXY_AUTHENTICATION_REQUIRED = ("Proxy Authentication Required", 407),
+    REQUEST_TIMEOUT = ("Request Timeout", 408),
+    CONFLICT = ("Conflict", 409)
 
 
-def error_response(error):
+def error_response(error, details=None):
 
     """
 
@@ -46,7 +51,7 @@ def error_response(error):
 
     """
 
-    return (json.dumps({"error": error.value[0]}), error.value[1])
+    return (json.dumps({"error": error.value[0], "details": details}), error.value[1])
 
 
 def valid_login(api, user_id, app_name=None):
@@ -79,6 +84,6 @@ def invalid_login():
     """
 
     return (
-        json.dumps({"error": Error.UNAUTHORIZED.value[0], "auth": "failure"}),
-        Error.UNAUTHORIZED.value[1],
+        json.dumps({"error": ClientError.UNAUTHORIZED.value[0], "auth": "failure"}),
+        ClientError.UNAUTHORIZED.value[1],
     )

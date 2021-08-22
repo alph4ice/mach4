@@ -21,7 +21,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from flask import request
-from .pipeline import *
-
-__version__ = MACH4_VERSION
+from .text import *
+from .captcha import *
+from .refresh import *
+from .response import *

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Sat Feb 20 11:49:30 2021
 
@@ -27,7 +28,7 @@ class HCaptchaInstance:
     
     """
     
-    def __init__(self, verify_url="https://hcaptcha.com/siteverify", secret=None):
+    def __init__(self, verify_url="https://hcaptcha.com/siteverify", site_key=None, secret=None):
         
         
         """
@@ -37,9 +38,14 @@ class HCaptchaInstance:
         """
         
         self.verify_url = verify_url
+        self.site_key = site_key
         self.secret = secret
         
     def verify(self, response, remote_ip=None, site_key=None, secret=None):
+        
+        if site_key is None:
+            
+            site_key = self.site_key
         
         if secret is None:
             

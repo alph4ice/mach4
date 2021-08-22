@@ -20,11 +20,10 @@ limitations under the License.
 
 
 from flask import request, Flask
-from .refresh import Refresh
-from mach4 import response
+from mach4.utils import response, Refresh
 from mach4 import security
 
-MACH4_VERSION = "0.1.1-DEV"
+MACH4_VERSION = "0.2.0-DEV"
 
 
 class Route:
@@ -35,7 +34,7 @@ class Route:
 
     """
 
-    def __init__(self, uri, handler, auth_required, accept_method):
+    def __init__(self, uri, handler, auth_required, accept_method, captcha_required, custom_captcha_instance):
 
         """
 
@@ -47,6 +46,8 @@ class Route:
         self.handler = handler
         self.auth_required = auth_required
         self.accept_method = accept_method
+        self.captcha_required = captcha_required
+        self.custom_captcha_instance = custom_captcha_instance
 
 
 class API:
@@ -62,6 +63,7 @@ class API:
         server_name,
         app_version,
         name,
+        default_captcha_instance=None,
         debug=False,
         default_return=response.error_response,
         users_time_out=1800000,
@@ -80,6 +82,7 @@ class API:
         self.app_version = app_version
         self.server_name = server_name
         self.wsgi = Flask(name)
+        self.default_captcha_instance = default_captcha_instance
         self.debug = debug
         self.deep_diag = False
         self.default_return = default_return
@@ -96,7 +99,7 @@ class API:
         self.wsgi.after_request(self.after_request)
 
     def add_route(
-        self, uri, handler, auth_required=False, accept_method=["GET", "POST"]
+        self, uri, handler, auth_required=False, accept_method=["GET", "POST"], captcha_required=False, custom_captcha_instance=None
     ):
 
         """
@@ -105,7 +108,7 @@ class API:
 
         """
 
-        self.routing[uri] = Route(uri, handler, auth_required, accept_method)
+        self.routing[uri] = Route(uri, handler, auth_required, accept_method, captcha_required, custom_captcha_instance)
         self.wsgi.add_url_rule(uri, uri[1:], handler, methods=accept_method)
 
     def before_request(self):
@@ -116,26 +119,53 @@ class API:
 
         """
 
-        uri = request.path
+        uri = request.path # Getting request URI
 
         if not uri in self.routing:
 
-            return self.default_return(response.Error.NOT_FOUND)
-
-        if not request.method in self.routing[uri].accept_method:
-            print(self.routing[uri].accept_method)
-            print(request.method)
-            return self.default_return(response.Error.METHOD_NOT_ALLOWED)
-
-        if self.routing[uri].auth_required:
-
+            return self.default_return(response.ClientError.NOT_FOUND)
+        
+        
+        # Method checking
+        
+        if not request.method in self.routing[uri].accept_method: # If used method isn't allowed
+            
+            return self.default_return(response.ClientError.METHOD_NOT_ALLOWED) # Send HTTP 405 Error
+        
+        
+        # Captcha checking
+        
+        if self.routing[uri].captcha_required: # If captcha is required for this route
+            
+            captcha_instance = self.default_captcha_instance # Getting default captcha instance
+            
+            if not self.routing[uri].custom_captcha_instance is None: # If there is a custom captcha instance for this route
+                
+                captcha_instance = self.routing[uri].custom_captcha_instance # Getting custom captcha instance
+            
+            # Storing useful datas
+            captcha_response = request.form.get("h-captcha-response")
+            remote_ip = request.remote_addr
+            
+            captcha_validity = captcha_instance.verify(captcha_response, remote_ip=remote_ip) # Dialing with HCaptcha servers
+            
+            if not captcha_validity:
+                
+                return self.default_return(response.ClientError.CONFLICT) # Send HTTP 409 Error
+        
+        
+        # Auth checking
+        
+        if self.routing[uri].auth_required: # If authentification is required for this route
+            
+            # Storing useful datas
             user_id = request.args.get("user")
             jwt = request.cookies.get("jwt")
             xsrf_token = request.headers.get("xsrf-token")
 
-            if not security.check_auth(jwt, xsrf_token, user_id, self.index):
+            if not security.check_auth(jwt, xsrf_token, user_id, self.index): # If signatures can't be validated
 
-                return self.default_return(response.Error.UNAUTHORIZED)
+                return self.default_return(response.ClientError.UNAUTHORIZED) # Send HTTP 401 Error
 
     def after_request(self, response):
 
