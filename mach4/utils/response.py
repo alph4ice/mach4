@@ -20,7 +20,7 @@ limitations under the License.
 
 import json
 from flask import make_response
-from .error import ClientError
+from .utils import ClientError
 
 
 def error_response(error, details=None):
